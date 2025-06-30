@@ -58,7 +58,7 @@
     },
     "win": {
       "artifactName": "${productName}.Setup.${ext}",
-      "icon": "hqhelper/public/icons/logo_v2_256x256.png",
+      "icon": "resources/app_logo/logo_v2_256x256.png",
       "target": [
         {
           "target": "nsis",
@@ -70,8 +70,8 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "electron/static-pages/icons/logo_v2.icns",
-      "artifactName": "${productName}-${version}-mac.${ext}",
+      "icon": "resources/app_logo/logo_v2_256x256.icns",
+      "artifactName": "${productName}.Mac.${ext}",
       "category": "public.app-category.utilities"
     }
   }
