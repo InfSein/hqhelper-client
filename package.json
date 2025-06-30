@@ -7,7 +7,8 @@
   "description": "Client for HqHelper.",
   "main": "dist/main.js",
   "scripts": {
-    "vue-build": "npm run build --prefix hqhelper",
+    "hqhelper-update": "git submodule update --remote hqhelper && git add hqhelper && git commit -m \"chore: update hqhelper submodule to latest\" || echo No changes",
+    "hqhelper-build": "npm run build --prefix hqhelper",
     "electron-start": "npm run build:electron && nodemon --watch electron --ext ts --exec \"electron dist/main.js\"",
     "electron-build": "npm run build:electron && electron-builder",
     "build:electron": "tsc -p tsconfig.json"
