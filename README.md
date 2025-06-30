@@ -1,6 +1,13 @@
 # HqHelper Client
+[![GitHub Release](https://img.shields.io/github/v/release/InfSein/hqhelper-client?style=flat&logo=github)](https://github.com/InfSein/hqhelper-client/releases) [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/InfSein/hqhelper-client/total?style=flat&logo=github)](https://github.com/InfSein/hqhelper-client/releases)
 
 The Electron client designed for [HqHelper](https://github.com/InfSein/hqhelper-dawntrail) .
+
+## Use client
+
+Download in [Download Page](https://infsein.github.io/hqhelper-dawntrail/#/download),
+
+Or in [Latest Release](https://github.com/InfSein/hqhelper-client/releases).
 
 ## Build Guideline
 
@@ -23,6 +30,12 @@ npm run vue-build
 
 ```bash
 npm run electron-start
+```
+
+#### Hotload during dev
+
+```bash
+npm run vue-build
 ```
 
 ### Build client
