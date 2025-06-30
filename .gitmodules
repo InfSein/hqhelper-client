@@ -1,0 +1,3 @@
+[submodule "hqhelper"]
+	path = hqhelper
+	url = https://github.com/InfSein/hqhelper-dawntrail

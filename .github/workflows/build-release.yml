@@ -1,0 +1,49 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.8.1
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Electron app (mac + win)
+        run: npm run electron-build -- --mac --win
+
+      - name: Get commit hash
+        id: get_hash
+        run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Create tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag build-${{ steps.get_hash.outputs.short_sha }}
+          git push origin build-${{ steps.get_hash.outputs.short_sha }}
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ steps.get_hash.outputs.short_sha }}
+          name: "Release for ${{ steps.get_hash.outputs.short_sha }}"
+          body: |
+            This is an automatic build from commit `${{ steps.get_hash.outputs.short_sha }}`
+          files: |
+            dist/*.dmg
+            dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

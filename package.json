@@ -1,0 +1,77 @@
+{
+  "name": "hqhelper-client",
+  "version": "2.2.7",
+  "private": true,
+  "author": "InfSein",
+  "description": "Client for HqHelper.",
+  "main": "./electron/main.js",
+  "scripts": {
+    "vue-build": "npm run build --prefix hqhelper",
+    "electron-start": "nodemon --exec electron .",
+    "electron-build": "electron-builder"
+  },
+  "dependencies": {
+    "axios": "^1.7.4",
+    "electron-log": "^5.2.0",
+    "unzipper": "^0.12.3"
+  },
+  "devDependencies": {
+    "electron": "^31.4.0",
+    "electron-builder": "^24.6.0",
+    "nodemon": "^3.1.4"
+  },
+  "overrides": {
+    "string-width": "4.0.0",
+    "wrap-ansi": "7.0.0",
+    "strip-ansi": "6.0.1"
+  },
+  "build": {
+    "appId": "com.infSein.hqhelperDawntrail",
+    "productName": "HqHelper",
+    "asar": true,
+    "asarUnpack": [
+      "electron/static-pages/**"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "hqhelper/dist/**/*",
+      "electron/main.js",
+      "electron/preload.js"
+    ],
+    "extraResources": [
+      {
+        "from": "hqhelper/dist/",
+        "to": "static-pages/",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "include": "electron/installer.nsh"
+    },
+    "win": {
+      "artifactName": "${productName}.Setup.${ext}",
+      "icon": "hqhelper/public/icons/logo_v2_256x256.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "electron/static-pages/icons/logo_v2.icns",
+      "artifactName": "${productName}-${version}-mac.${ext}",
+      "category": "public.app-category.utilities"
+    }
+  }
+}
