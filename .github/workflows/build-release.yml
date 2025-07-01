@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -38,9 +40,8 @@ jobs:
       - name: Extract versions
         id: versions
         run: |
-          WORKDIR="${{ github.workspace }}"
-          client_version=$(node -p "require('$WORKDIR/package.json').clientVersion")
-          hqhelper_version=$(node -p "require('$WORKDIR/hqhelper/package.json').version")
+          client_version=$(jq -r .clientVersion package.json)
+          hqhelper_version=$(jq -r .version hqhelper/package.json)
           echo "client_version=$client_version" >> $GITHUB_OUTPUT
           echo "hqhelper_version=$hqhelper_version" >> $GITHUB_OUTPUT
 
