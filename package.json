@@ -64,7 +64,7 @@
       "include": "electron/installer.nsh"
     },
     "win": {
-      "artifactName": "${productName}.Setup.${ext}",
+      "artifactName": "${productName}.WinSetup.${ext}",
       "icon": "resources/app_logo/logo_v2_256x256.png",
       "target": [
         {
