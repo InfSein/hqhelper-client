@@ -38,8 +38,9 @@ jobs:
       - name: Extract versions
         id: versions
         run: |
-          client_version=$(node -p "require('${{ github.workspace }}/package.json').clientVersion")
-          hqhelper_version=$(node -p "require('${{ github.workspace }}/hqhelper/package.json').version")
+          WORKDIR="${{ github.workspace }}"
+          client_version=$(node -p "require('$WORKDIR/package.json').clientVersion")
+          hqhelper_version=$(node -p "require('$WORKDIR/hqhelper/package.json').version")
           echo "client_version=$client_version" >> $GITHUB_OUTPUT
           echo "hqhelper_version=$hqhelper_version" >> $GITHUB_OUTPUT
 
