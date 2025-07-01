@@ -15,12 +15,13 @@ Or in [Latest Release](https://github.com/InfSein/hqhelper-client/releases).
 
 ```bash
 git clone https://github.com/InfSein/hqhelper-client.git
+git submodule update --init --recursive
 cd hqhelper-client
 npm i
 cd hqhelper
 npm i
 cd ..
-npm run vue-build
+npm run hqhelper-build
 ```
 
 ### Run dev
@@ -35,7 +36,7 @@ npm run electron-start
 #### Hotload during dev
 
 ```bash
-npm run vue-build
+npm run hqhelper-build
 ```
 
 ### Build client
