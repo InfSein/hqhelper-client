@@ -1,14 +1,17 @@
 {
   "name": "hqhelper-client",
   "version": "2.2.7",
+  "clientVersion": "v6",
   "private": true,
   "author": "InfSein",
   "description": "Client for HqHelper.",
-  "main": "./electron/main.js",
+  "main": "dist/main.js",
   "scripts": {
-    "vue-build": "npm run build --prefix hqhelper",
-    "electron-start": "nodemon --exec electron .",
-    "electron-build": "electron-builder"
+    "hqhelper-update": "git submodule update --remote hqhelper && git add hqhelper && git commit -m \"chore: update hqhelper submodule to latest\" || echo No changes",
+    "hqhelper-build": "npm run build --prefix hqhelper",
+    "electron-start": "npm run build:electron && nodemon --watch electron --ext ts --exec \"electron dist/main.js\"",
+    "electron-build": "npm run build:electron && electron-builder",
+    "build:electron": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "axios": "^1.7.4",
@@ -16,9 +19,13 @@
     "unzipper": "^0.12.3"
   },
   "devDependencies": {
+    "@types/electron": "^1.6.12",
+    "@types/node": "^24.0.7",
+    "@types/unzipper": "^0.10.11",
     "electron": "^31.4.0",
     "electron-builder": "^24.6.0",
-    "nodemon": "^3.1.4"
+    "nodemon": "^3.1.4",
+    "typescript": "^5.8.3"
   },
   "overrides": {
     "string-width": "4.0.0",
@@ -38,8 +45,8 @@
     "publish": null,
     "files": [
       "hqhelper/dist/**/*",
-      "electron/main.js",
-      "electron/preload.js"
+      "dist/main.js",
+      "dist/preload.js"
     ],
     "extraResources": [
       {
@@ -58,7 +65,7 @@
     },
     "win": {
       "artifactName": "${productName}.Setup.${ext}",
-      "icon": "hqhelper/public/icons/logo_v2_256x256.png",
+      "icon": "resources/app_logo/logo_v2_256x256.png",
       "target": [
         {
           "target": "nsis",
@@ -70,8 +77,8 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "electron/static-pages/icons/logo_v2.icns",
-      "artifactName": "${productName}-${version}-mac.${ext}",
+      "icon": "resources/app_logo/logo_v2_256x256.icns",
+      "artifactName": "${productName}.Mac.${ext}",
       "category": "public.app-category.utilities"
     }
   }
