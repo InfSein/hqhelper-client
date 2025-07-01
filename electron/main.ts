@@ -256,22 +256,28 @@ function createWindow() {
   
   /* 从给定URL下载WEB项目更新包，并在下载成功后自动重启 */
   ipcMain.handle('download-update-pack', async (event, url) => {
+    const log_info = (msg: string) => logger.info('[download-update-pack] ' + msg)
+    const log_error = (msg: string) => logger.error('[download-update-pack] ' + msg)
     try {
-      logger.info('[download-update-pack] 下载URL: ' + url)
+      log_info('开始下载')
+      log_info('下载URL: ' + url)
       sendProgress(event, 'requesting', {})
       const response = await downloadFromUrl(event, url)
       const writeStream = fs.createWriteStream(ZIP_PATH)
       response.data.pipe(writeStream)
 
       writeStream.on('finish', async () => {
-        logger.info('[download-update-pack] 下载成功，开始解压')
+        log_info('下载成功')
         try {
+          log_info('开始解压')
+          log_info('ZIP_PATH=' + ZIP_PATH)
+          log_info('TEMP_DIR=' + TEMP_DIR)
           sendProgress(event, 'extracting', {})
           await extractZipFile(ZIP_PATH, TEMP_DIR)
           console.log('ZIP file extracted successfully')
-          logger.info('[download-update-pack] 解压成功，开始替换本地文件')
+          log_info('解压成功')
         } catch (error: any) {
-          logger.error('[download-update-pack] 解压期间发生错误：' + error)
+          log_error('解压期间发生错误：' + error)
           sendProgress(event, 'end', {}, {
             msg: error.message,
             onstage: 'extracting',
@@ -279,11 +285,14 @@ function createWindow() {
           return 'error'
         }
         try {
+          log_info('开始替换本地文件')
+          log_info('EXTRACTED_DIR=' + EXTRACTED_DIR)
+          log_info('STATICPAGE_DIR=' + STATICPAGE_DIR)
           sendProgress(event, 'replacing', {})
           updateLocalFiles(EXTRACTED_DIR, STATICPAGE_DIR)
-          logger.info('[download-update-pack] 替换成功')
+          log_info('替换成功')
         } catch (error: any) {
-          logger.error('[download-update-pack] 替换本地文件发生错误：' + error)
+          log_error('替换本地文件发生错误：' + error)
           sendProgress(event, 'end', {}, {
             msg: error.message,
             onstage: 'replacing',
@@ -293,9 +302,9 @@ function createWindow() {
         try {
           sendProgress(event, 'cleaning', {})
           fs.rmSync(TEMP_DIR, { recursive: true, force: true })
-          logger.info('[download-update-pack] 临时文件清理成功')
+          log_info('临时文件清理成功')
         } catch (error: any) {
-          logger.error('[download-update-pack] 清理临时文件发生错误：' + error)
+          log_error('清理临时文件发生错误：' + error)
           sendProgress(event, 'end', {}, {
             msg: error.message,
             onstage: 'cleaning',
@@ -307,7 +316,7 @@ function createWindow() {
           app.relaunch()
           app.exit()
         } catch (error: any) {
-          logger.error('[download-update-pack] 重启应用失败：' + error)
+          log_error('重启应用失败：' + error)
           sendProgress(event, 'end', {}, {
             msg: error.message,
             onstage: 'relaunching',
@@ -317,7 +326,7 @@ function createWindow() {
       })
 
       writeStream.on('error', (error) => {
-        logger.error('[download-update-pack] 下载期间发生错误：' + error)
+        log_error('下载期间发生错误：' + error)
         sendProgress(event, 'end', {}, {
           msg: error.message,
           onstage: 'downloading',
@@ -326,12 +335,12 @@ function createWindow() {
       })
 
       writeStream.on('close', () => {
-        logger.info('[download-update-pack] 下载完成')
+        log_info('下载完成')
       })
 
       return ''
     } catch (error: any) {
-      logger.error('[download-update-pack] 检查更新时发生错误：' + error)
+      log_error('检查更新时发生错误：' + error)
       sendProgress(event, 'end', {}, {
         msg: error.toString(),
         onstage: 'requesting',
@@ -342,28 +351,30 @@ function createWindow() {
   
   /* 从给定URL下载EXE文件，并在下载成功后自动打开 */
   ipcMain.handle('download-and-open', async (event, { url, fileName }) => {
+    const log_info = (...params: any[]) => logger.info('[download-and-open] ', ...params)
+    const log_error = (...params: any[]) => logger.error('[download-and-open] ', ...params)
     try {
-      logger.info('[download-and-open] 开始检查/清理临时文件')
+      log_info('开始检查/清理临时文件')
       const EXE_PATH = path.join(app.getPath('userData'), fileName)
-      logger.info('[download-and-open] EXE_PATH: ' + EXE_PATH)
+      log_info('EXE_PATH: ' + EXE_PATH)
       const fileExists = await fsExists(EXE_PATH)
       if (fileExists) {
         await fsUnlink(EXE_PATH)
       }
-      logger.info('[download-and-open] 检查/清理临时文件成功')
+      log_info('检查/清理临时文件成功')
 
-      logger.info('[download-and-open] 下载URL: ' + url)
+      log_info('下载URL: ' + url)
       sendProgress(event, 'requesting', {})
       const response = await downloadFromUrl(event, url)
       const writeStream = fs.createWriteStream(EXE_PATH)
       response.data.pipe(writeStream)
 
       writeStream.on('finish', async () => {
-        logger.info('[download-and-open] 下载成功，开始尝试启动安装程序')
+        log_info('下载成功，开始尝试启动安装程序')
         sendProgress(event, 'opening', {})
         exec(`"${EXE_PATH}"`, (err, stdout, stderr) => {
           if (err) {
-            logger.error('[download-and-open] 启动程序时出错:', err)
+            log_error('启动程序时出错:', err)
             throw new Error('启动安装程序失败')
           }
         })
@@ -371,7 +382,7 @@ function createWindow() {
       })
 
       writeStream.on('error', (error) => {
-        logger.error('[download-and-open] 下载期间发生错误：' + error)
+        log_error('下载期间发生错误：', error)
         sendProgress(event, 'end', {}, {
           msg: error.message,
           onstage: 'downloading',
@@ -380,12 +391,12 @@ function createWindow() {
       })
 
       writeStream.on('close', () => {
-        logger.info('[download-and-open] 下载完成')
+        log_info('下载完成')
       })
 
       return ''
     } catch (error: any) {
-      logger.error('[download-and-open] 检查更新时发生错误：' + error)
+      log_error('检查更新时发生错误：', error)
       sendProgress(event, 'end', {}, {
         msg: error.message,
         onstage: 'requesting',
