@@ -4,7 +4,7 @@
   "clientVersion": "v6",
   "private": true,
   "author": "InfSein",
-  "description": "Client for HqHelper.",
+  "description": "The Electron client designed for HqHelper.",
   "main": "dist/main.js",
   "scripts": {
     "hqhelper-update": "git submodule update --remote hqhelper && git add hqhelper && git commit -m \"chore: update hqhelper submodule to latest\" || echo No changes",
