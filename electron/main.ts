@@ -54,12 +54,18 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1620,
     height: 835,
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: 'rgba(255,255,255,0.5)',
-      height: 35,
-      symbolColor: 'black'
-    },
+    titleBarStyle: process.platform === 'win32' ? 'hidden' : undefined,
+    ...(
+      process.platform === 'win32'
+        ? {
+          titleBarOverlay: {
+            color: 'rgba(255,255,255,0.5)',
+            height: 35,
+            symbolColor: 'black'
+          }
+        }
+        : {}
+    ),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -69,13 +75,21 @@ function createWindow() {
   let indexPath = ''
   if (app.isPackaged) {
     // 生产环境
-    const STATICPAGE_DIR = path.join(process.resourcesPath, 'static-pages')
-    indexPath = path.join(STATICPAGE_DIR, 'index.html')
+    const userStaticPage = path.join(app.getPath('userData'), 'static-pages', 'index.html')
+    if (process.platform === 'darwin' && fs.existsSync(userStaticPage)) {
+      indexPath = userStaticPage
+    } else {
+      const STATICPAGE_DIR = path.join(process.resourcesPath, 'static-pages')
+      indexPath = path.join(STATICPAGE_DIR, 'index.html')
+    }
+    if (!fs.existsSync(indexPath)) {
+      logger.error('[main] index.html not found at: ' + indexPath)
+    }
   } else {
     // 开发环境
     indexPath = path.join(__dirname, '..', 'hqhelper', 'dist', 'index.html')
   }
-  mainWindow.loadURL(`file://${indexPath}`)
+  mainWindow.loadFile(indexPath)
 
   // 创建自定义菜单
   const menuTemplate : MenuItem[] = [
@@ -258,6 +272,11 @@ function createWindow() {
   ipcMain.handle('download-update-pack', async (event, url) => {
     const log_info = (msg: string) => logger.info('[download-update-pack] ' + msg)
     const log_error = (msg: string) => logger.error('[download-update-pack] ' + msg)
+    // 针对不同平台，确定目标目录
+    const isMac = process.platform === 'darwin'
+    const TARGET_STATICPAGE_DIR = isMac
+      ? path.join(app.getPath('userData'), 'static-pages')
+      : path.join(process.resourcesPath, 'static-pages')
     try {
       log_info('开始下载')
       log_info('下载URL: ' + url)
@@ -274,7 +293,6 @@ function createWindow() {
           log_info('TEMP_DIR=' + TEMP_DIR)
           sendProgress(event, 'extracting', {})
           await extractZipFile(ZIP_PATH, TEMP_DIR)
-          console.log('ZIP file extracted successfully')
           log_info('解压成功')
         } catch (error: any) {
           log_error('解压期间发生错误：' + error)
@@ -287,9 +305,9 @@ function createWindow() {
         try {
           log_info('开始替换本地文件')
           log_info('EXTRACTED_DIR=' + EXTRACTED_DIR)
-          log_info('STATICPAGE_DIR=' + STATICPAGE_DIR)
+          log_info('TARGET_STATICPAGE_DIR=' + TARGET_STATICPAGE_DIR)
           sendProgress(event, 'replacing', {})
-          updateLocalFiles(EXTRACTED_DIR, STATICPAGE_DIR)
+          updateLocalFiles(EXTRACTED_DIR, TARGET_STATICPAGE_DIR)
           log_info('替换成功')
         } catch (error: any) {
           log_error('替换本地文件发生错误：' + error)
@@ -349,33 +367,39 @@ function createWindow() {
     }
   })
   
-  /* 从给定URL下载EXE文件，并在下载成功后自动打开 */
+  /* 从给定URL下载新版客户端安装包，并在下载成功后自动打开 */
   ipcMain.handle('download-and-open', async (event, { url, fileName }) => {
     const log_info = (...params: any[]) => logger.info('[download-and-open] ', ...params)
     const log_error = (...params: any[]) => logger.error('[download-and-open] ', ...params)
     try {
       log_info('开始检查/清理临时文件')
-      const EXE_PATH = path.join(app.getPath('userData'), fileName)
-      log_info('EXE_PATH: ' + EXE_PATH)
-      const fileExists = await fsExists(EXE_PATH)
+      const FILE_PATH = path.join(app.getPath('userData'), fileName)
+      log_info('FILE_PATH: ' + FILE_PATH)
+      const fileExists = await fsExists(FILE_PATH)
       if (fileExists) {
-        await fsUnlink(EXE_PATH)
+        await fsUnlink(FILE_PATH)
       }
       log_info('检查/清理临时文件成功')
 
       log_info('下载URL: ' + url)
       sendProgress(event, 'requesting', {})
       const response = await downloadFromUrl(event, url)
-      const writeStream = fs.createWriteStream(EXE_PATH)
+      const writeStream = fs.createWriteStream(FILE_PATH)
       response.data.pipe(writeStream)
 
       writeStream.on('finish', async () => {
-        log_info('下载成功，开始尝试启动安装程序')
+        log_info('下载成功，开始尝试打开安装包')
         sendProgress(event, 'opening', {})
-        exec(`"${EXE_PATH}"`, (err, stdout, stderr) => {
+        let openCmd = ''
+        if (process.platform === 'win32') {
+          openCmd = `"${FILE_PATH}"`
+        } else if (process.platform === 'darwin') {
+          openCmd = `open "${FILE_PATH}"`
+        }
+        exec(openCmd, (err, stdout, stderr) => {
           if (err) {
             log_error('启动程序时出错:', err)
-            throw new Error('启动安装程序失败')
+            throw new Error('启动安装包失败')
           }
         })
         sendProgress(event, 'end', {})
