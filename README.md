@@ -15,9 +15,9 @@ Or in [Latest Release](https://github.com/InfSein/hqhelper-client/releases).
 
 ```bash
 git clone https://github.com/InfSein/hqhelper-client.git
-git submodule update --init --recursive
 cd hqhelper-client
 npm i
+git submodule update --init --recursive
 cd hqhelper
 npm i
 cd ..
@@ -33,7 +33,7 @@ npm run hqhelper-build
 npm run electron-start
 ```
 
-#### Hotload during dev
+#### Hot-Reload during dev
 
 ```bash
 npm run hqhelper-build

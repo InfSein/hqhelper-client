@@ -4,7 +4,7 @@
   "clientVersion": "v6",
   "private": true,
   "author": "InfSein",
-  "description": "Client for HqHelper.",
+  "description": "The Electron client designed for HqHelper.",
   "main": "dist/main.js",
   "scripts": {
     "hqhelper-update": "git submodule update --remote hqhelper && git add hqhelper && git commit -m \"chore: update hqhelper submodule to latest\" || echo No changes",
@@ -64,7 +64,7 @@
       "include": "electron/installer.nsh"
     },
     "win": {
-      "artifactName": "${productName}.Setup.${ext}",
+      "artifactName": "${productName}.WinSetup.${ext}",
       "icon": "resources/app_logo/logo_v2_256x256.png",
       "target": [
         {
