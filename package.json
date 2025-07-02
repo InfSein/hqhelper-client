@@ -50,8 +50,8 @@
     ],
     "extraResources": [
       {
-        "from": "hqhelper/dist/",
-        "to": "static-pages/",
+        "from": "hqhelper/dist",
+        "to": "static-pages",
         "filter": [
           "**/*"
         ]
