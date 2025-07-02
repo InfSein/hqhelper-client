@@ -20,8 +20,15 @@ jobs:
         with:
           node-version: 20.8.1
 
-      - name: Install dependencies
+      - name: Install dependencies (root)
         run: npm install
+
+      - name: Install dependencies (hqhelper)
+        run: npm install
+        working-directory: hqhelper
+
+      - name: Build hqhelper frontend
+        run: npm run hqhelper-build
 
       - name: Build Electron app (mac + win)
         run: npm run electron-build -- --mac --win
