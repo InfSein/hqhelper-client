@@ -184,7 +184,12 @@ function createWindow() {
     window?.close()
   })
 
-  /* 获取客户端的当前版本(需要手动修改CONST值) */
+  /* 获取客户端的运行环境 */
+  ipcMain.handle('get-platform', () => {
+    return process.platform
+  })
+
+  /* 获取客户端的当前版本 */
   ipcMain.handle('get-app-version', () => {
     return CLIENT_VERSION
   })

@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   maximize: () => ipcRenderer.send('window-maximize'),
   restore: () => ipcRenderer.send('window-restore'),
   close: () => ipcRenderer.send('window-close'),
+  clientPlatform: ipcRenderer.invoke('get-platform'),
   clientVersion: ipcRenderer.invoke('get-app-version'),
   httpGet: (url: string) => ipcRenderer.invoke('http-get', url),
   simulatePing: (domain: string) => ipcRenderer.invoke('simulate-ping', domain),
