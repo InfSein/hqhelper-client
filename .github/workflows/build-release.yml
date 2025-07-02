@@ -60,8 +60,15 @@ jobs:
           body: |
             This is an automatic build from commit `${{ steps.get_hash.outputs.short_sha }}`
 
-            **Client Version**: ${{ steps.versions.outputs.client_version }}
-            **HqHelper Version**: ${{ steps.versions.outputs.hqhelper_version }}
+            ## Versions
+            **Client Version**: `${{ steps.versions.outputs.client_version }}`
+            **HqHelper Version**: `${{ steps.versions.outputs.hqhelper_version }}`
+
+            ## Release Files
+            |         File          |   Platform   | Requirements                                             |
+            | :-------------------: | :----------: | -------------------------------------------------------- |
+            | HqHelper.WinSetup.exe |    Windows   | Windows 7 SP1 or later                                   |
+            |   HqHelper.Mac.dmg    |    Mac OS    | Mac OS 10.13 or later <br> * M-series Silicon Required.  |
           files: |
             dist/*.dmg
             dist/*.exe
