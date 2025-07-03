@@ -542,7 +542,7 @@ function createWindow() {
     const focusedWindow = BrowserWindow.getFocusedWindow()
     if (focusedWindow) {
       const isAlwaysOnTop = focusedWindow.isAlwaysOnTop()
-      focusedWindow.setAlwaysOnTop(!isAlwaysOnTop, 'normal')
+      focusedWindow.setAlwaysOnTop(!isAlwaysOnTop, 'floating')
     }
   })
 
