@@ -571,15 +571,17 @@ function createWindow() {
   ipcMain.on('update-title-bar-theme', (event, isDarkMode) => {
     updateTitleBarTheme(mainWindow, isDarkMode)
   })
-  function updateTitleBarTheme(window: any, isDarkMode: boolean) {
+  function updateTitleBarTheme(window: BrowserWindow | null, isDarkMode: boolean) {
     const color = isDarkMode ? '#18181c' : '#ffffff'
     const symbolColor = isDarkMode ? 'white' : 'black'
   
-    window.setTitleBarOverlay({
-      color: color,
-      height: 35,
-      symbolColor: symbolColor,
-    })
+    if (window?.setTitleBarOverlay) {
+      window.setTitleBarOverlay({
+        color: color,
+        height: 35,
+        symbolColor: symbolColor,
+      })
+    }
   }
 
   /* 打开开发者工具 */
