@@ -1,0 +1,49 @@
+name: Update Submodule and Auto Merge PR
+
+on:
+  repository_dispatch:
+    types: [update-submodule]
+
+jobs:
+  update-submodule:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout hqhelper-client
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Update submodule
+        run: |
+          git submodule update --remote hqhelper
+          git add hqhelper
+          git commit -m "chore: update hqhelper submodule to latest" || echo "No changes to commit"
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update hqhelper submodule to latest"
+          title: "Update hqhelper submodule"
+          body: "Auto-generated PR to update hqhelper submodule to latest commit on master."
+          branch: update-submodule-${{ github.run_id }}
+          delete-branch: true
+
+      - name: Enable auto-merge
+        if: steps.cpr.outputs.pull-request-url != ''
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: squash
