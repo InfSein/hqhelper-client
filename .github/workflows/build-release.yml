@@ -64,6 +64,9 @@ jobs:
             **Client Version**: `${{ steps.versions.outputs.client_version }}`
             **HqHelper Version**: `${{ steps.versions.outputs.hqhelper_version }}`
 
+            ## CHANGELOG
+            Please read [CHANGELOG.md](https://github.com/InfSein/hqhelper-client/blob/master/CHANGELOG.md) .
+
             ## Release Files
             |         File          |   Platform   | Requirements                                             |
             | :-------------------: | :----------: | -------------------------------------------------------- |
