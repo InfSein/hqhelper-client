@@ -33,7 +33,7 @@ jobs:
         id: cpr
         uses: peter-evans/create-pull-request@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.ACTIONS_PAT }}
           commit-message: "chore: update hqhelper submodule to latest"
           title: "Update hqhelper submodule"
           body: "Auto-generated PR to update hqhelper submodule to latest commit on master."
@@ -44,6 +44,6 @@ jobs:
         if: steps.cpr.outputs.pull-request-url != ''
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.ACTIONS_PAT }}
           pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
           merge-method: squash
