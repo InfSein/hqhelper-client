@@ -18,6 +18,11 @@ jobs:
           submodules: recursive
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Save old version
+        id: oldver
+        run: |
+          jq -r .version hqhelper/package.json > old_version.txt
+
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
@@ -27,7 +32,39 @@ jobs:
         run: |
           git submodule update --remote hqhelper
           git add hqhelper
-          git commit -m "chore: update hqhelper submodule to latest" || echo "No changes to commit"
+
+      - name: Check for submodule changes
+        id: check_changes
+        run: |
+          if git diff --cached --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Exit if no submodule changes
+        if: steps.check_changes.outputs.changed == 'false'
+        run: |
+          echo "No submodule update, exiting."
+          exit 0
+
+      - name: Save new version
+        id: newver
+        run: |
+          jq -r .version hqhelper/package.json > new_version.txt
+
+      - name: Compare versions
+        id: version_changed
+        run: |
+          if cmp -s old_version.txt new_version.txt; then
+            echo "version_changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit submodule update
+        run: |
+          git commit -m "chore: update hqhelper submodule to latest"
 
       - name: Create Pull Request
         id: cpr
@@ -35,13 +72,13 @@ jobs:
         with:
           token: ${{ secrets.ACTIONS_PAT }}
           commit-message: "chore: update hqhelper submodule to latest"
-          title: "Update hqhelper submodule"
+          title: "chore: update hqhelper submodule"
           body: "Auto-generated PR to update hqhelper submodule to latest commit on master."
           branch: update-submodule-${{ github.run_id }}
           delete-branch: true
 
       - name: Enable auto-merge
-        if: steps.cpr.outputs.pull-request-url != ''
+        if: steps.cpr.outputs.pull-request-url != '' && steps.version_changed.outputs.version_changed == 'true'
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
           token: ${{ secrets.ACTIONS_PAT }}
