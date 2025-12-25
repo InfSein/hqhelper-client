@@ -84,3 +84,12 @@ jobs:
           token: ${{ secrets.ACTIONS_PAT }}
           pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
           merge-method: squash
+
+      - name: Delete branch
+        if: steps.cpr.outputs.pull-request-merged == 'true'
+        run: |
+          gh api \
+            -X DELETE \
+            repos/${{ github.repository }}/git/refs/heads/update-submodule-${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ secrets.ACTIONS_PAT }}
