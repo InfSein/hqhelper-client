@@ -198,7 +198,7 @@ function createWindow() {
   ipcMain.handle('http-get', async (event, url) => {
     console.log('GET', url)
     try {
-      const response = await axios.get(url, { timeout: 3000 })
+      const response = await axios.get(url, { timeout: 10000 })
       let data = response.data
       if (typeof(data) !== 'string') data = JSON.stringify(data)
       console.log('RESPONSE', data)
