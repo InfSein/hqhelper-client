@@ -195,10 +195,10 @@ function createWindow() {
   })
   
   /* 向给定URL发送GET请求，成功时返回字符串格式的数据 */
-  ipcMain.handle('http-get', async (event, url) => {
+  ipcMain.handle('http-get', async (event, { url, timeout }) => {
     console.log('GET', url)
     try {
-      const response = await axios.get(url, { timeout: 10000 })
+      const response = await axios.get(url, { timeout: timeout || 3000 })
       let data = response.data
       if (typeof(data) !== 'string') data = JSON.stringify(data)
       console.log('RESPONSE', data)
