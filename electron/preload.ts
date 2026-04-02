@@ -10,7 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   close: () => ipcRenderer.send('window-close'),
   clientPlatform: ipcRenderer.invoke('get-platform'),
   clientVersion: ipcRenderer.invoke('get-app-version'),
-  httpGet: (url: string) => ipcRenderer.invoke('http-get', url),
+  httpGet: (url: string, timeout?: number) => ipcRenderer.invoke('http-get', { url, timeout }),
   simulatePing: (domain: string) => ipcRenderer.invoke('simulate-ping', domain),
   downloadUpdatePack: (url: string) => ipcRenderer.invoke('download-update-pack', url),
   downloadAndOpen: (url: string, fileName: string) => ipcRenderer.invoke('download-and-open', { url, fileName }),
