@@ -1,7 +1,7 @@
 {
   "name": "hqhelper-client",
-  "version": "2.4.5",
-  "clientVersion": "v8",
+  "version": "2.5.0",
+  "clientVersion": "v7",
   "private": true,
   "author": "InfSein",
   "description": "The Electron client designed for HqHelper.",
