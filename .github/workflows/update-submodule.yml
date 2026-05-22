@@ -18,11 +18,6 @@ jobs:
           submodules: recursive
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Save old version
-        id: oldver
-        run: |
-          jq -r .version hqhelper/package.json > old_version.txt
-
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
@@ -48,20 +43,6 @@ jobs:
           echo "No submodule update, exiting."
           exit 0
 
-      - name: Save new version
-        id: newver
-        run: |
-          jq -r .version hqhelper/package.json > new_version.txt
-
-      - name: Compare versions
-        id: version_changed
-        run: |
-          if cmp -s old_version.txt new_version.txt; then
-            echo "version_changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "version_changed=true" >> $GITHUB_OUTPUT
-          fi
-
       - name: Commit submodule update
         run: |
           git commit -m "chore: update hqhelper submodule to latest"
@@ -78,7 +59,7 @@ jobs:
           delete-branch: true
 
       - name: Enable auto-merge
-        if: steps.cpr.outputs.pull-request-url != '' && steps.version_changed.outputs.version_changed == 'true'
+        if: steps.cpr.outputs.pull-request-url != ''
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
           token: ${{ secrets.ACTIONS_PAT }}
