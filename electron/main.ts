@@ -9,8 +9,12 @@ import logger from 'electron-log'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import pkg from '../package.json'
+import { FishXIVClient } from './fish-xiv-client';
+import { registerFishXIVIpc } from './ipc';
 
 const CLIENT_VERSION = pkg.clientVersion
+
+const fishClient = new FishXIVClient();
 
 // 仅在初次安装v7+客户端时执行，迁移旧客户端的用户数据
 if (app.isPackaged) {
@@ -593,7 +597,13 @@ function createWindow() {
   })
 }
 
-app.on('ready', createWindow)
+app.whenReady().then(() => {
+  registerFishXIVIpc(fishClient);
+  createWindow();
+});
+app.on('before-quit', () => {
+  fishClient.disconnect();
+});
 
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit()
@@ -602,6 +612,7 @@ app.on('window-all-closed', function () {
 app.on('activate', function () {
   if (mainWindow === null) createWindow()
 })
+
 
 async function extractZipFile(zipPath: string, extractionDir: string) {
   try {
