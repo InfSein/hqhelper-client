@@ -72,9 +72,9 @@ export class FishXIVClient {
     this.ws = new WebSocket(url);
 
     this.ws.on('open', () => {
-      console.log('[FishXIV] WebSocket 已连接');
+      console.log('[ws-client] WebSocket 已连接');
       this.resetHeartbeatTimeout();
-      this.notifyRenderer('fish-xiv:connected');
+      this.notifyRenderer('ws:connected');
     });
 
     this.ws.on('message', (data) => {
@@ -83,19 +83,19 @@ export class FishXIVClient {
         const msg: ServerMessage = JSON.parse(data.toString());
         this.handleMessage(msg);
       } catch (e) {
-        console.error('[FishXIV] 消息解析失败:', e);
+        console.error('[ws-client] 消息解析失败:', e);
       }
     });
 
     this.ws.on('close', (code, reason) => {
-      console.log(`[FishXIV] WebSocket 已断开: ${code} ${reason}`);
+      console.log(`[ws-client] WebSocket 已断开: ${code} ${reason}`);
       this.cleanup();
-      this.notifyRenderer('fish-xiv:disconnected');
+      this.notifyRenderer('ws:disconnected');
       this.scheduleReconnect();
     });
 
     this.ws.on('error', (err) => {
-      console.error('[FishXIV] WebSocket 错误:', err.message);
+      console.error('[ws-client] WebSocket 错误:', err.message);
       // error 后会触发 close，不需要在此重连
     });
   }
@@ -117,11 +117,11 @@ export class FishXIVClient {
   private handleMessage(msg: ServerMessage) {
     if (msg.cmdType === 1) {
       // 心跳：通知渲染进程进程 PID
-      this.notifyRenderer('fish-xiv:heartbeat', { processId: msg.processId });
+      this.notifyRenderer('ws:heartbeat', { processId: msg.processId });
     } else if (msg.cmdType === 2) {
       this.latestSnapshot = msg;
       // 背包快照：推送到渲染进程
-      this.notifyRenderer('fish-xiv:inventory', msg);
+      this.notifyRenderer('ws:inventory', msg);
     }
   }
 
@@ -136,7 +136,7 @@ export class FishXIVClient {
   private resetHeartbeatTimeout() {
     if (this.heartbeatTimer) clearTimeout(this.heartbeatTimer);
     this.heartbeatTimer = setTimeout(() => {
-      console.warn('[FishXIV] 心跳超时，断开连接');
+      console.warn('[ws-client] 心跳超时，断开连接');
       this.ws?.close();
     }, HEARTBEAT_TIMEOUT_MS);
   }

@@ -274,9 +274,9 @@ export class FishXIVClient {
     this.ws = new WebSocket(url);
 
     this.ws.on('open', () => {
-      console.log('[FishXIV] WebSocket 已连接');
+      console.log('[ws-client] WebSocket 已连接');
       this.resetHeartbeatTimeout();
-      this.notifyRenderer('fish-xiv:connected');
+      this.notifyRenderer('ws:connected');
     });
 
     this.ws.on('message', (data) => {
@@ -285,19 +285,19 @@ export class FishXIVClient {
         const msg: ServerMessage = JSON.parse(data.toString());
         this.handleMessage(msg);
       } catch (e) {
-        console.error('[FishXIV] 消息解析失败:', e);
+        console.error('[ws-client] 消息解析失败:', e);
       }
     });
 
     this.ws.on('close', (code, reason) => {
-      console.log(`[FishXIV] WebSocket 已断开: ${code} ${reason}`);
+      console.log(`[ws-client] WebSocket 已断开: ${code} ${reason}`);
       this.cleanup();
-      this.notifyRenderer('fish-xiv:disconnected');
+      this.notifyRenderer('ws:disconnected');
       this.scheduleReconnect();
     });
 
     this.ws.on('error', (err) => {
-      console.error('[FishXIV] WebSocket 错误:', err.message);
+      console.error('[ws-client] WebSocket 错误:', err.message);
       // error 后会触发 close，不需要在此重连
     });
   }
@@ -319,11 +319,11 @@ export class FishXIVClient {
   private handleMessage(msg: ServerMessage) {
     if (msg.cmdType === 1) {
       // 心跳：通知渲染进程进程 PID
-      this.notifyRenderer('fish-xiv:heartbeat', { processId: msg.processId });
+      this.notifyRenderer('ws:heartbeat', { processId: msg.processId });
     } else if (msg.cmdType === 2) {
       this.latestSnapshot = msg;
       // 背包快照：推送到渲染进程
-      this.notifyRenderer('fish-xiv:inventory', msg);
+      this.notifyRenderer('ws:inventory', msg);
     }
   }
 
@@ -338,7 +338,7 @@ export class FishXIVClient {
   private resetHeartbeatTimeout() {
     if (this.heartbeatTimer) clearTimeout(this.heartbeatTimer);
     this.heartbeatTimer = setTimeout(() => {
-      console.warn('[FishXIV] 心跳超时，断开连接');
+      console.warn('[ws-client] 心跳超时，断开连接');
       this.ws?.close();
     }, HEARTBEAT_TIMEOUT_MS);
   }
@@ -376,17 +376,17 @@ import { FishXIVClient } from './fish-xiv-client';
 
 export function registerFishXIVIpc(client: FishXIVClient) {
   // 渲染进程请求更新连接参数
-  ipcMain.on('fish-xiv:set-connection', (_event, port: number, token: string) => {
+  ipcMain.on('ws:set-connection', (_event, port: number, token: string) => {
     client.updateConnection(port, token);
   });
 
   // 渲染进程请求最新快照（用于窗口刚打开时同步状态）
-  ipcMain.handle('fish-xiv:get-latest', () => {
+  ipcMain.handle('ws:get-latest', () => {
     return client.getLatestSnapshot();
   });
 
   // 渲染进程请求断开
-  ipcMain.on('fish-xiv:disconnect', () => {
+  ipcMain.on('ws:disconnect', () => {
     client.disconnect();
   });
 }
@@ -427,42 +427,42 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('fishXIV', {
   // 设置连接参数
   setConnection: (port: number, token: string) => {
-    ipcRenderer.send('fish-xiv:set-connection', port, token);
+    ipcRenderer.send('ws:set-connection', port, token);
   },
 
   // 获取最新快照（请求-响应模式）
   getLatestSnapshot: (): Promise<InventorySnapshot | null> => {
-    return ipcRenderer.invoke('fish-xiv:get-latest');
+    return ipcRenderer.invoke('ws:get-latest');
   },
 
   // 断开连接
   disconnect: () => {
-    ipcRenderer.send('fish-xiv:disconnect');
+    ipcRenderer.send('ws:disconnect');
   },
 
   // 监听背包更新
   onInventory: (callback: (data: InventorySnapshot) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: InventorySnapshot) => callback(data);
-    ipcRenderer.on('fish-xiv:inventory', handler);
-    return () => ipcRenderer.removeListener('fish-xiv:inventory', handler);
+    ipcRenderer.on('ws:inventory', handler);
+    return () => ipcRenderer.removeListener('ws:inventory', handler);
   },
 
   // 监听心跳
   onHeartbeat: (callback: (data: { processId: number }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { processId: number }) => callback(data);
-    ipcRenderer.on('fish-xiv:heartbeat', handler);
-    return () => ipcRenderer.removeListener('fish-xiv:heartbeat', handler);
+    ipcRenderer.on('ws:heartbeat', handler);
+    return () => ipcRenderer.removeListener('ws:heartbeat', handler);
   },
 
   // 监听连接状态
   onConnected: (callback: () => void) => {
-    ipcRenderer.on('fish-xiv:connected', callback);
-    return () => ipcRenderer.removeListener('fish-xiv:connected', callback);
+    ipcRenderer.on('ws:connected', callback);
+    return () => ipcRenderer.removeListener('ws:connected', callback);
   },
 
   onDisconnected: (callback: () => void) => {
-    ipcRenderer.on('fish-xiv:disconnected', callback);
-    return () => ipcRenderer.removeListener('fish-xiv:disconnected', callback);
+    ipcRenderer.on('ws:disconnected', callback);
+    return () => ipcRenderer.removeListener('ws:disconnected', callback);
   },
 });
 ```
@@ -863,18 +863,18 @@ export class FishXIVClient {
         const msg: ServerMessage = JSON.parse(data.toString());
         this.handleMessage(msg);
       } catch (e) {
-        console.error('[FishXIV] 消息解析失败:', e);
+        console.error('[ws-client] 消息解析失败:', e);
       }
     });
 
     ws.on('close', () => {
       this.cleanup();
-      this.notifyRenderer('fish-xiv:disconnected');
+      this.notifyRenderer('ws:disconnected');
       this.scheduleReconnect();
     });
 
     ws.on('error', (err) => {
-      console.error('[FishXIV] WebSocket 错误:', err.message);
+      console.error('[ws-client] WebSocket 错误:', err.message);
     });
 
     this.resetHeartbeatTimeout();
@@ -894,12 +894,12 @@ export function registerFishXIVIpc(client: FishXIVClient) {
   // ... 已有的 ipcMain.on / handle ...
 
   // 测试连接（一次性，不影响当前连接）
-  ipcMain.handle('fish-xiv:test', async (_event, port: number, token: string) => {
+  ipcMain.handle('ws:test', async (_event, port: number, token: string) => {
     return testFishXIVConnection(port, token);
   });
 
   // 确认应用新连接（无感切换）
-  ipcMain.handle('fish-xiv:apply', async (_event, port: number, token: string) => {
+  ipcMain.handle('ws:apply', async (_event, port: number, token: string) => {
     const ok = await client.switchConnection(port, token);
     if (ok) {
       saveConfig({ port, token });
@@ -919,12 +919,12 @@ contextBridge.exposeInMainWorld('fishXIV', {
 
   /** 测试连接是否可用，不影响当前连接 */
   testConnection: (port: number, token: string): Promise<TestResult> => {
-    return ipcRenderer.invoke('fish-xiv:test', port, token);
+    return ipcRenderer.invoke('ws:test', port, token);
   },
 
   /** 确认应用新连接（无感切换 + 持久化配置） */
   applyConnection: (port: number, token: string): Promise<boolean> => {
-    return ipcRenderer.invoke('fish-xiv:apply', port, token);
+    return ipcRenderer.invoke('ws:apply', port, token);
   },
 });
 ```
@@ -1101,7 +1101,7 @@ button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
   │
   ├─ 500ms 后...
   │   ├─ testStatus = 'testing'
-  │   ├─ ipcRenderer.invoke('fish-xiv:test', port, token)
+  │   ├─ ipcRenderer.invoke('ws:test', port, token)
   │   │   └─ 主进程：new WebSocket(url) → 一次性测试
   │   │       ├─ 收到消息 → { ok: true, processId }
   │   │       ├─ 401 响应 → { ok: false, reason: 'auth' }
@@ -1111,7 +1111,7 @@ button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
   │   └─ 显示测试结果
   │
   ├─ 用户点击「应用」
-  │   ├─ ipcRenderer.invoke('fish-xiv:apply', port, token)
+  │   ├─ ipcRenderer.invoke('ws:apply', port, token)
   │   │   └─ 主进程：switchConnection(port, token)
   │   │       ├─ new WebSocket(url) → 等待首条消息
   │   │       ├─ 收到消息 → 新连接就绪

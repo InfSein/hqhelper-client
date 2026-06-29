@@ -23,45 +23,45 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateTitleBarTheme: (isDarkMode: boolean) => ipcRenderer.send('update-title-bar-theme', isDarkMode),
   openDevTools: () => ipcRenderer.send('open-dev-tools'),
 })
-contextBridge.exposeInMainWorld('fishXIV', {
+contextBridge.exposeInMainWorld('wsApi', {
   // 设置连接参数
   setConnection: (port: number, token: string) => {
-    ipcRenderer.send('fish-xiv:set-connection', port, token);
+    ipcRenderer.send('ws:set-connection', port, token);
   },
 
   // 获取最新快照（请求-响应模式）
   getLatestSnapshot: (): Promise<any> => {
-    return ipcRenderer.invoke('fish-xiv:get-latest');
+    return ipcRenderer.invoke('ws:get-latest');
   },
 
   // 断开连接
   disconnect: () => {
-    ipcRenderer.send('fish-xiv:disconnect');
+    ipcRenderer.send('ws:disconnect');
   },
 
   // 监听背包更新
   onInventory: (callback: (data: any) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: any) => callback(data);
-    ipcRenderer.on('fish-xiv:inventory', handler);
-    return () => ipcRenderer.removeListener('fish-xiv:inventory', handler);
+    ipcRenderer.on('ws:inventory', handler);
+    return () => ipcRenderer.removeListener('ws:inventory', handler);
   },
 
   // 监听心跳
   onHeartbeat: (callback: (data: { processId: number }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { processId: number }) => callback(data);
-    ipcRenderer.on('fish-xiv:heartbeat', handler);
-    return () => ipcRenderer.removeListener('fish-xiv:heartbeat', handler);
+    ipcRenderer.on('ws:heartbeat', handler);
+    return () => ipcRenderer.removeListener('ws:heartbeat', handler);
   },
 
   // 监听连接状态
   onConnected: (callback: () => void) => {
-    ipcRenderer.on('fish-xiv:connected', callback);
-    return () => ipcRenderer.removeListener('fish-xiv:connected', callback);
+    ipcRenderer.on('ws:connected', callback);
+    return () => ipcRenderer.removeListener('ws:connected', callback);
   },
 
   onDisconnected: (callback: () => void) => {
-    ipcRenderer.on('fish-xiv:disconnected', callback);
-    return () => ipcRenderer.removeListener('fish-xiv:disconnected', callback);
+    ipcRenderer.on('ws:disconnected', callback);
+    return () => ipcRenderer.removeListener('ws:disconnected', callback);
   },
 });
 contextBridge.exposeInMainWorld('$syncStore', {

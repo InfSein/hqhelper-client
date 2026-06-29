@@ -9,12 +9,12 @@ import logger from 'electron-log'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import pkg from '../package.json'
-import { FishXIVClient } from './fish-xiv-client';
-import { registerFishXIVIpc } from './ipc';
+import { FishXIVClient } from './ws-client';
+import { registerFishXIVIpc as registerWsIpc } from './ipc';
 
 const CLIENT_VERSION = pkg.clientVersion
 
-const fishClient = new FishXIVClient();
+const wsClient = new FishXIVClient();
 
 // 仅在初次安装v7+客户端时执行，迁移旧客户端的用户数据
 if (app.isPackaged) {
@@ -375,6 +375,56 @@ function createWindow() {
       throw error
     }
   })
+  async function extractZipFile(zipPath: string, extractionDir: string) {
+    try {
+      await fs.promises.mkdir(extractionDir, { recursive: true })
+      await fs.createReadStream(zipPath)
+        .pipe(unzipper.Extract({ path: extractionDir }))
+        .promise()
+    } catch (error) {
+      console.error('Failed to extract ZIP file:', error)
+      throw error
+    }
+  }
+  function updateLocalFiles(sourceDir: string, targetDir: string) {
+    // 确保目标目录存在
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true })
+    }
+
+    // 读取源目录的文件和子目录
+    const sourceFiles = fs.readdirSync(sourceDir)
+
+    // 处理源目录中的每个文件/目录
+    sourceFiles.forEach(file => {
+      const sourceFilePath = path.join(sourceDir, file)
+      const targetFilePath = path.join(targetDir, file)
+
+      if (fs.lstatSync(sourceFilePath).isFile()) {
+        // 复制文件
+        fs.copyFileSync(sourceFilePath, targetFilePath)
+      } else if (fs.lstatSync(sourceFilePath).isDirectory()) {
+        // 递归处理子目录
+        updateLocalFiles(sourceFilePath, targetFilePath)
+      }
+    })
+
+    // 删除目标目录中不存在于源目录的文件/目录
+    const targetFiles = fs.readdirSync(targetDir)
+    targetFiles.forEach(file => {
+      const targetFilePath = path.join(targetDir, file)
+      const sourceFilePath = path.join(sourceDir, file)
+
+      if (!sourceFiles.includes(file)) {
+        // 如果目标目录有而源目录没有，删除
+        if (fs.lstatSync(targetFilePath).isFile()) {
+          fs.unlinkSync(targetFilePath)
+        } else if (fs.lstatSync(targetFilePath).isDirectory()) {
+          fs.rmSync(targetFilePath, { recursive: true, force: true })
+        }
+      }
+    })
+  }
   
   /* 从给定URL下载新版客户端安装包，并在下载成功后自动打开 */
   ipcMain.handle('download-and-open', async (event, { url, fileName }) => {
@@ -595,73 +645,23 @@ function createWindow() {
       focusedWindow.webContents.openDevTools()
     }
   })
+
+  // #region Web Socket
+
+  // #endregion
 }
 
 app.whenReady().then(() => {
-  registerFishXIVIpc(fishClient);
+  registerWsIpc(wsClient);
   createWindow();
 });
 app.on('before-quit', () => {
-  fishClient.disconnect();
+  wsClient.disconnect();
 });
 
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit()
 })
-
 app.on('activate', function () {
   if (mainWindow === null) createWindow()
 })
-
-
-async function extractZipFile(zipPath: string, extractionDir: string) {
-  try {
-    await fs.promises.mkdir(extractionDir, { recursive: true })
-    await fs.createReadStream(zipPath)
-      .pipe(unzipper.Extract({ path: extractionDir }))
-      .promise()
-  } catch (error) {
-    console.error('Failed to extract ZIP file:', error)
-    throw error
-  }
-}
-
-function updateLocalFiles(sourceDir: string, targetDir: string) {
-  // 确保目标目录存在
-  if (!fs.existsSync(targetDir)) {
-    fs.mkdirSync(targetDir, { recursive: true })
-  }
-
-  // 读取源目录的文件和子目录
-  const sourceFiles = fs.readdirSync(sourceDir)
-
-  // 处理源目录中的每个文件/目录
-  sourceFiles.forEach(file => {
-    const sourceFilePath = path.join(sourceDir, file)
-    const targetFilePath = path.join(targetDir, file)
-
-    if (fs.lstatSync(sourceFilePath).isFile()) {
-      // 复制文件
-      fs.copyFileSync(sourceFilePath, targetFilePath)
-    } else if (fs.lstatSync(sourceFilePath).isDirectory()) {
-      // 递归处理子目录
-      updateLocalFiles(sourceFilePath, targetFilePath)
-    }
-  })
-
-  // 删除目标目录中不存在于源目录的文件/目录
-  const targetFiles = fs.readdirSync(targetDir)
-  targetFiles.forEach(file => {
-    const targetFilePath = path.join(targetDir, file)
-    const sourceFilePath = path.join(sourceDir, file)
-
-    if (!sourceFiles.includes(file)) {
-      // 如果目标目录有而源目录没有，删除
-      if (fs.lstatSync(targetFilePath).isFile()) {
-        fs.unlinkSync(targetFilePath)
-      } else if (fs.lstatSync(targetFilePath).isDirectory()) {
-        fs.rmSync(targetFilePath, { recursive: true, force: true })
-      }
-    }
-  })
-}
