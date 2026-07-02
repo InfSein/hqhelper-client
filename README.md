@@ -48,3 +48,25 @@ npm run hqhelper-build
 ```bash
 npm run electron-build
 ```
+
+## Project Notes
+
+### What it does
+
+This Electron client packages HqHelper and provides native desktop abilities such as update download, window control, clipboard access, and local WebSocket bridging.
+
+### Architecture
+
+- `electron/main.ts` creates windows and registers desktop IPC handlers.
+- `electron/preload.ts` exposes limited APIs to the Vue renderer through `contextBridge`.
+- `electron/ws-client.ts` keeps the FishXIVItemReader WebSocket connection and forwards JSON messages to renderer windows.
+- `electron/ipc.ts` registers the WebSocket IPC handlers used by `window.wsApi`.
+
+### Search Record
+
+- 2026-07-02: Checked [skills.sh](https://www.skills.sh/). No dedicated skill was more relevant than the active Vue/Pinia/frontend workflow.
+- 2026-07-02: Checked [Electron IPC docs](https://www.electronjs.org/docs/latest/tutorial/ipc). The implementation follows the documented pattern of renderer-to-main `invoke`, preload `contextBridge`, and main-to-renderer `webContents.send`.
+
+### Completed
+
+- FishXIVItemReader WebSocket connection, test connection, status updates, reconnect, and renderer message forwarding.

@@ -1,165 +1,193 @@
-import WebSocket from 'ws';
-import { BrowserWindow, ipcMain } from 'electron';
+import WebSocket from 'ws'
+import { BrowserWindow } from 'electron'
 
-interface PingMessage {
-  cmdType: 1;
-  processId: number;
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
+
+export interface ConnectionSettings {
+  port: number
+  token: string
 }
 
-interface InventoryItem {
-  containerId: number;
-  containerLabel: string;
-  slotIndex: number;
-  itemId: number;
-  itemName: string;
-  quantity: number;
-  condition: number;
-  spiritbondOrCollectability: number;
-  glamourItemId: number;
-  flags: number;
-  flagsText: string;
-  highQuality: boolean;
-  collectable: boolean;
-  address: string;
+export interface ConnectionTestResult {
+  success: boolean
+  message: string
 }
 
-interface InventoryContainer {
-  id: number;
-  label: string;
-  slots: number;
-  itemCount: number;
-}
-
-interface InventorySnapshot {
-  cmdType: 2;
-  version: number;
-  processId: number;
-  containers: InventoryContainer[];
-  items: InventoryItem[];
-}
-
-type ServerMessage = PingMessage | InventorySnapshot;
-
-const DEFAULT_PORT = 17814;
-const RECONNECT_DELAY_MS = 3000;
-const HEARTBEAT_TIMEOUT_MS = 5000; // 心跳间隔 1s，5s 未收到视为断开
+const RECONNECT_DELAY_MS = 5000
+const CONNECT_DEBOUNCE_MS = 300
+const TEST_TIMEOUT_MS = 5000
 
 export class FishXIVClient {
-  private ws: WebSocket | null = null;
-  private port: number;
-  private token: string;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
-  private shouldReconnect = true;
-  private latestSnapshot: InventorySnapshot | null = null;
+  private ws: WebSocket | null = null
+  private settings: ConnectionSettings | null = null
+  private status: ConnectionStatus = 'disconnected'
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  private connectTimer: ReturnType<typeof setTimeout> | null = null
+  private shouldReconnect = false
 
-  constructor(port = DEFAULT_PORT, token = '') {
-    this.port = port;
-    this.token = token;
+  async connect(settings: ConnectionSettings): Promise<boolean> {
+    const normalized = this.normalizeSettings(settings)
+    if (!normalized) {
+      this.setStatus('error')
+      return false
+    }
+
+    this.settings = normalized
+    this.shouldReconnect = true
+
+    if (this.connectTimer) {
+      clearTimeout(this.connectTimer)
+    }
+
+    return new Promise((resolve) => {
+      this.connectTimer = setTimeout(() => {
+        this.connectTimer = null
+        this.openConnection(normalized)
+        resolve(true)
+      }, CONNECT_DEBOUNCE_MS)
+    })
   }
 
-  updateConnection(port: number, token: string) {
-    this.port = port;
-    this.token = token;
-    this.disconnect();
-    this.connect();
+  async disconnect(): Promise<void> {
+    this.shouldReconnect = false
+    this.settings = null
+    this.clearTimers()
+    this.closeSocket()
+    this.setStatus('disconnected')
   }
 
-  connect() {
-    if (this.ws) return;
+  async testConnection(settings: ConnectionSettings): Promise<ConnectionTestResult> {
+    const normalized = this.normalizeSettings(settings)
+    if (!normalized) {
+      return { success: false, message: '端口或密钥无效' }
+    }
 
-    const url = `ws://127.0.0.1:${this.port}/inventory?token=${encodeURIComponent(this.token)}`;
-    this.ws = new WebSocket(url);
+    return new Promise((resolve) => {
+      const socket = new WebSocket(this.buildUrl(normalized))
+      const timer = setTimeout(() => {
+        socket.removeAllListeners()
+        socket.close()
+        resolve({ success: false, message: '连接超时，请确认插件已启动' })
+      }, TEST_TIMEOUT_MS)
 
-    this.ws.on('open', () => {
-      console.log('[ws-client] WebSocket 已连接');
-      this.resetHeartbeatTimeout();
-      this.notifyRenderer('ws:connected');
-    });
+      socket.once('open', () => {
+        clearTimeout(timer)
+        socket.close()
+        resolve({ success: true, message: '连接成功' })
+      })
 
-    this.ws.on('message', (data) => {
-      this.resetHeartbeatTimeout();
-      try {
-        const msg: ServerMessage = JSON.parse(data.toString());
-        this.handleMessage(msg);
-      } catch (e) {
-        console.error('[ws-client] 消息解析失败:', e);
+      socket.once('error', (error) => {
+        clearTimeout(timer)
+        socket.removeAllListeners()
+        socket.close()
+        resolve({ success: false, message: this.formatError(error) })
+      })
+    })
+  }
+
+  private openConnection(settings: ConnectionSettings) {
+    this.clearReconnectTimer()
+    this.closeSocket()
+    this.setStatus('connecting')
+
+    const socket = new WebSocket(this.buildUrl(settings))
+    this.ws = socket
+
+    socket.on('open', () => {
+      if (this.ws !== socket) return
+      this.setStatus('connected')
+    })
+
+    socket.on('message', (data) => {
+      if (this.ws !== socket) return
+      this.forwardMessage(data)
+    })
+
+    socket.on('close', () => {
+      if (this.ws !== socket) return
+      this.ws = null
+      this.setStatus('disconnected')
+      this.scheduleReconnect()
+    })
+
+    socket.on('error', (error) => {
+      if (this.ws !== socket) return
+      console.error('[FishXIVItemReader] WebSocket 错误:', this.formatError(error))
+      this.setStatus('error')
+    })
+  }
+
+  private forwardMessage(data: WebSocket.RawData) {
+    try {
+      const message = JSON.parse(data.toString())
+      this.notifyRenderer('ws:message', message)
+    } catch (error) {
+      console.error('[FishXIVItemReader] 消息解析失败:', error)
+    }
+  }
+
+  private scheduleReconnect() {
+    if (!this.shouldReconnect || !this.settings || this.reconnectTimer) return
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null
+      if (this.settings) {
+        this.openConnection(this.settings)
       }
-    });
-
-    this.ws.on('close', (code, reason) => {
-      console.log(`[ws-client] WebSocket 已断开: ${code} ${reason}`);
-      this.cleanup();
-      this.notifyRenderer('ws:disconnected');
-      this.scheduleReconnect();
-    });
-
-    this.ws.on('error', (err) => {
-      console.error('[ws-client] WebSocket 错误:', err.message);
-      // error 后会触发 close，不需要在此重连
-    });
+    }, RECONNECT_DELAY_MS)
   }
 
-  disconnect() {
-    this.shouldReconnect = false;
-    this.cleanup();
-    if (this.ws) {
-      this.ws.removeAllListeners();
-      this.ws.close();
-      this.ws = null;
+  private normalizeSettings(settings: ConnectionSettings): ConnectionSettings | null {
+    const port = Number(settings.port)
+    const token = `${settings.token ?? ''}`.trim()
+    if (!Number.isInteger(port) || port < 1 || port > 65535 || !token) {
+      return null
+    }
+    return { port, token }
+  }
+
+  private buildUrl(settings: ConnectionSettings) {
+    return `ws://127.0.0.1:${settings.port}/inventory?token=${encodeURIComponent(settings.token)}`
+  }
+
+  private closeSocket() {
+    if (!this.ws) return
+    const socket = this.ws
+    this.ws = null
+    socket.removeAllListeners()
+    socket.close()
+  }
+
+  private clearTimers() {
+    if (this.connectTimer) {
+      clearTimeout(this.connectTimer)
+      this.connectTimer = null
+    }
+    this.clearReconnectTimer()
+  }
+
+  private clearReconnectTimer() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
     }
   }
 
-  getLatestSnapshot(): InventorySnapshot | null {
-    return this.latestSnapshot;
-  }
-
-  private handleMessage(msg: ServerMessage) {
-    if (msg.cmdType === 1) {
-      // 心跳：通知渲染进程进程 PID
-      this.notifyRenderer('ws:heartbeat', { processId: msg.processId });
-    } else if (msg.cmdType === 2) {
-      this.latestSnapshot = msg;
-      // 背包快照：推送到渲染进程
-      this.notifyRenderer('ws:inventory', msg);
-    }
+  private setStatus(status: ConnectionStatus) {
+    if (this.status === status) return
+    this.status = status
+    this.notifyRenderer('ws:status', status)
   }
 
   private notifyRenderer(channel: string, data?: unknown) {
     BrowserWindow.getAllWindows().forEach((win) => {
       if (!win.isDestroyed()) {
-        win.webContents.send(channel, data);
+        win.webContents.send(channel, data)
       }
-    });
+    })
   }
 
-  private resetHeartbeatTimeout() {
-    if (this.heartbeatTimer) clearTimeout(this.heartbeatTimer);
-    this.heartbeatTimer = setTimeout(() => {
-      console.warn('[ws-client] 心跳超时，断开连接');
-      this.ws?.close();
-    }, HEARTBEAT_TIMEOUT_MS);
-  }
-
-  private scheduleReconnect() {
-    if (!this.shouldReconnect) return;
-    if (this.reconnectTimer) return;
-    this.reconnectTimer = setTimeout(() => {
-      this.reconnectTimer = null;
-      this.connect();
-    }, RECONNECT_DELAY_MS);
-  }
-
-  private cleanup() {
-    if (this.heartbeatTimer) {
-      clearTimeout(this.heartbeatTimer);
-      this.heartbeatTimer = null;
-    }
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-    this.ws?.removeAllListeners();
-    this.ws = null;
+  private formatError(error: Error) {
+    return error.message || '连接失败，请确认端口和密钥正确'
   }
 }

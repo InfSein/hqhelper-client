@@ -24,46 +24,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openDevTools: () => ipcRenderer.send('open-dev-tools'),
 })
 contextBridge.exposeInMainWorld('wsApi', {
-  // 设置连接参数
-  setConnection: (port: number, token: string) => {
-    ipcRenderer.send('ws:set-connection', port, token);
+  onMessage: (callback: (data: any) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: any) => callback(data)
+    ipcRenderer.on('ws:message', handler)
+    return () => ipcRenderer.removeListener('ws:message', handler)
   },
-
-  // 获取最新快照（请求-响应模式）
-  getLatestSnapshot: (): Promise<any> => {
-    return ipcRenderer.invoke('ws:get-latest');
+  onStatusChange: (callback: (status: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, status: string) => callback(status)
+    ipcRenderer.on('ws:status', handler)
+    return () => ipcRenderer.removeListener('ws:status', handler)
   },
-
-  // 断开连接
-  disconnect: () => {
-    ipcRenderer.send('ws:disconnect');
-  },
-
-  // 监听背包更新
-  onInventory: (callback: (data: any) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, data: any) => callback(data);
-    ipcRenderer.on('ws:inventory', handler);
-    return () => ipcRenderer.removeListener('ws:inventory', handler);
-  },
-
-  // 监听心跳
-  onHeartbeat: (callback: (data: { processId: number }) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, data: { processId: number }) => callback(data);
-    ipcRenderer.on('ws:heartbeat', handler);
-    return () => ipcRenderer.removeListener('ws:heartbeat', handler);
-  },
-
-  // 监听连接状态
-  onConnected: (callback: () => void) => {
-    ipcRenderer.on('ws:connected', callback);
-    return () => ipcRenderer.removeListener('ws:connected', callback);
-  },
-
-  onDisconnected: (callback: () => void) => {
-    ipcRenderer.on('ws:disconnected', callback);
-    return () => ipcRenderer.removeListener('ws:disconnected', callback);
-  },
-});
+  connect: (settings: { port: number; token: string }) => ipcRenderer.invoke('ws:connect', settings),
+  disconnect: () => ipcRenderer.invoke('ws:disconnect'),
+  testConnection: (settings: { port: number; token: string }) => ipcRenderer.invoke('ws:test-connection', settings),
+})
 contextBridge.exposeInMainWorld('$syncStore', {
   emit: (event: any, data: any) => {
     ipcRenderer.send('store-sync', { event, data })
