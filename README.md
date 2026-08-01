@@ -2,11 +2,11 @@
 [![GitHub Release](https://img.shields.io/github/v/release/InfSein/hqhelper-client?style=flat&logo=github)](https://github.com/InfSein/hqhelper-client/releases) [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/InfSein/hqhelper-client/total?style=flat&logo=github)](https://github.com/InfSein/hqhelper-client/releases) <br>
 ![Electron](https://img.shields.io/badge/electron-31.4.0-blue?logo=electron&logoColor=white) ![electron-builder](https://img.shields.io/badge/electron--builder-24.6.0-brightgreen?logo=appveyor&logoColor=white) ![TypeScript](https://img.shields.io/badge/typescript-5.8.3-3178c6?logo=typescript&logoColor=white)
 
-The Electron client designed for [HqHelper](https://github.com/InfSein/hqhelper-dawntrail) .
+The Electron client designed for [HqHelper](https://github.com/InfSein/hqhelper) .
 
 ## Use client
 
-Download in [Download Page](https://infsein.github.io/hqhelper-dawntrail/#/download),
+Download in [Download Page](https://download.hqhelper.com),
 
 Or in [Latest Release](https://github.com/InfSein/hqhelper-client/releases).
 
