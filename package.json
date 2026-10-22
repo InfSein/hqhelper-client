@@ -1,5 +1,5 @@
 {
-  "name": "hqhelper-client",
+  "name": "hqhelper-client:beta",
   "version": "2.5.0",
   "clientVersion": "v7",
   "private": true,
@@ -34,8 +34,8 @@
     "strip-ansi": "6.0.1"
   },
   "build": {
-    "appId": "com.infSein.hqhelperDawntrail",
-    "productName": "HqHelper",
+    "appId": "com.infSein.hqhelperBeta",
+    "productName": "HqHelper Beta",
     "asar": true,
     "asarUnpack": [
       "electron/static-pages/**"
