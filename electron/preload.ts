@@ -23,6 +23,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateTitleBarTheme: (isDarkMode: boolean) => ipcRenderer.send('update-title-bar-theme', isDarkMode),
   openDevTools: () => ipcRenderer.send('open-dev-tools'),
 })
+contextBridge.exposeInMainWorld('wsApi', {
+  onMessage: (callback: (data: any) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: any) => callback(data)
+    ipcRenderer.on('ws:message', handler)
+    return () => ipcRenderer.removeListener('ws:message', handler)
+  },
+  onStatusChange: (callback: (status: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, status: string) => callback(status)
+    ipcRenderer.on('ws:status', handler)
+    return () => ipcRenderer.removeListener('ws:status', handler)
+  },
+  connect: (settings: { port: number; token: string }) => ipcRenderer.invoke('ws:connect', settings),
+  disconnect: () => ipcRenderer.invoke('ws:disconnect'),
+  testConnection: (settings: { port: number; token: string }) => ipcRenderer.invoke('ws:test-connection', settings),
+})
 contextBridge.exposeInMainWorld('$syncStore', {
   emit: (event: any, data: any) => {
     ipcRenderer.send('store-sync', { event, data })
