@@ -16,6 +16,7 @@ const CLIENT_VERSION = pkg.clientVersion
 
 const wsClient = new FishXIVClient();
 
+/*
 // 仅在初次安装v7+客户端时执行，迁移旧客户端的用户数据
 if (app.isPackaged) {
   const oldAppName = 'hqhelper-dawntrail'
@@ -30,6 +31,7 @@ if (app.isPackaged) {
     }
   }
 }
+*/
 
 const fsExists = promisify(fs.exists)
 const fsUnlink = promisify(fs.unlink)
